@@ -289,6 +289,11 @@ const (
 	// DumpDirectoryPath provides a path to the directory in which dumps for a UVM will be collected in
 	// case the UVM crashes.
 	DumpDirectoryPath = "io.microsoft.virtualmachine.dump-directory-path"
+
+	// KryptonSandbox specifies whether a krypton sandbox will be created.
+	KryptonSandboxType = "io.kubernetes.cri.kryptonsandbox"
+
+	DirectFileMappingInMB = "io.microsoft.virtualmachine.computetopology.memory.directfilemappinginmb"
 )
 
 // AnnotationExpansions maps annotations that will be expanded into an array of

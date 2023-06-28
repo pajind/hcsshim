@@ -125,7 +125,11 @@ func newMappedVPMemModifyRequest(
 		if pmem == nil {
 			return nil, errors.Errorf("no device found at location %d", deviceNumber)
 		}
-		request.ResourcePath = fmt.Sprintf(resourcepaths.VPMemDeviceResourceFormat, deviceNumber, md.mappedRegion.Offset())
+		if len(pmem.mappings) == 1 {
+			request.ResourcePath = fmt.Sprintf(resourcepaths.VPMemControllerResourceFormat, deviceNumber)
+		} else {
+			request.ResourcePath = fmt.Sprintf(resourcepaths.VPMemDeviceResourceFormat, deviceNumber, md.mappedRegion.Offset())
+		}
 	default:
 		return nil, errors.New("unsupported request type")
 	}

@@ -13,8 +13,8 @@ import (
 
 // CreateUVMScratch is a helper to create a scratch for a Windows utility VM
 // with permissions to the specified VM ID in a specified directory
-func CreateUVMScratch(ctx context.Context, imagePath, destDirectory, vmID string) error {
-	sourceScratch := filepath.Join(imagePath, `UtilityVM\SystemTemplate.vhdx`)
+func CreateUVMScratch(ctx context.Context, templateDir, destDirectory, vmID string) error {
+	sourceScratch := filepath.Join(templateDir, `SystemTemplate.vhdx`)
 	targetScratch := filepath.Join(destDirectory, "sandbox.vhdx")
 	if err := copyfile.CopyFile(ctx, sourceScratch, targetScratch, true); err != nil {
 		return err

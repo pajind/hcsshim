@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/Microsoft/go-winio"
+	"github.com/Microsoft/hcsshim/computestorage"
 	"github.com/Microsoft/hcsshim/internal/hcserror"
 	"github.com/Microsoft/hcsshim/internal/oc"
 	"github.com/Microsoft/hcsshim/internal/safefile"
@@ -26,6 +27,7 @@ type baseLayerWriter struct {
 	bw           *winio.BackupFileWriter
 	err          error
 	hasUtilityVM bool
+	hasEFIDir    bool
 	dirInfo      []dirInfo
 }
 
@@ -84,6 +86,10 @@ func (w *baseLayerWriter) Add(name string, fileInfo *winio.FileBasicInfo) (err e
 
 	if filepath.ToSlash(name) == `UtilityVM/Files` {
 		w.hasUtilityVM = true
+	}
+
+	if filepath.ToSlash(name) == `Files/EFI` {
+		w.hasEFIDir = true
 	}
 
 	var f *os.File
@@ -166,6 +172,20 @@ func (w *baseLayerWriter) Close() (err error) {
 		err = ProcessBaseLayer(w.ctx, w.root.Name())
 		if err != nil {
 			return err
+		}
+
+		if w.hasEFIDir {
+			baseVhdPath := filepath.Join(w.root.Name(), "SystemTemplateBase.vhdx")
+			diffVhdPath := filepath.Join(w.root.Name(), "SystemTemplate.vhdx")
+
+			options := computestorage.OsLayerOptions{
+				SkipSandboxPreExpansion: true,
+			}
+
+			err = computestorage.SetupUtilityVMBaseLayer(w.ctx, w.root.Name(), baseVhdPath, diffVhdPath, 20, options)
+			if err != nil {
+				return err
+			}
 		}
 
 		if w.hasUtilityVM {

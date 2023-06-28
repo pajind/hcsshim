@@ -18,6 +18,10 @@ import (
 func (uvm *UtilityVM) Share(ctx context.Context, reqHostPath, reqUVMPath string, readOnly bool) (err error) {
 	if uvm.OS() == "windows" {
 		options := uvm.DefaultVSMBOptions(readOnly)
+		
+		// Disable direct map if the uvm is a template so we can easily unmount shares when trying to create a template.
+		options.NoDirectmap = uvm.IsTemplate
+
 		vsmbShare, err := uvm.AddVSMB(ctx, reqHostPath, options)
 		if err != nil {
 			return err
