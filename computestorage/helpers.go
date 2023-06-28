@@ -122,7 +122,7 @@ func SetupContainerBaseLayer(ctx context.Context, layerPath, baseVhdPath, diffVh
 // `diffVhdPath` is the path where the differencing disk for the UVM should be created.
 //
 // `sizeInGB` specifies the size in gigabytes to make the base vhdx.
-func SetupUtilityVMBaseLayer(ctx context.Context, uvmPath, baseVhdPath, diffVhdPath string, sizeInGB uint64) (err error) {
+func SetupUtilityVMBaseLayer(ctx context.Context, uvmPath, baseVhdPath, diffVhdPath string, sizeInGB uint64, options OsLayerOptions) (err error) {
 	// Remove the base and differencing disks if they exist in case we're asking for a different size.
 	if _, err := os.Stat(baseVhdPath); err == nil {
 		if err := os.RemoveAll(baseVhdPath); err != nil {
@@ -165,9 +165,9 @@ func SetupUtilityVMBaseLayer(ctx context.Context, uvmPath, baseVhdPath, diffVhdP
 		return errors.Wrapf(err, "failed to attach virtual disk")
 	}
 
-	options := OsLayerOptions{
-		Type: OsLayerTypeVM,
-	}
+	
+	options.Type = OsLayerTypeVM
+	
 	if err := SetupBaseOSLayer(ctx, uvmPath, windows.Handle(handle), options); err != nil {
 		return err
 	}

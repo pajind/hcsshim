@@ -230,6 +230,37 @@ func specToUVMCreateOptionsCommon(ctx context.Context, opts *uvm.Options, s *spe
 	opts.DumpDirectoryPath = parseAnnotationsString(s.Annotations, annotations.DumpDirectoryPath, opts.DumpDirectoryPath)
 }
 
+// SpecToKryptonUVMCreateOpts parses `s` and returns `*uvm.OptionsWCOW`.
+func SpecToKryptonUVMCreateOpts(ctx context.Context, s *specs.Spec, id, owner string) (interface{}, error) {
+	// TODO(pbozzay): Validate that this is a krypton
+	if IsLCOW(s) {
+		return nil, errors.New("cannot create linux UVM opts for krypton spec")
+	} else if IsWCOW(s) {
+		wopts := uvm.NewDefaultOptionsWCOW(id, owner)
+		wopts.MemorySizeInMB = ParseAnnotationsMemory(ctx, s, annotations.MemorySizeInMB, wopts.MemorySizeInMB)
+		wopts.DirectFileMappingInMB = parseAnnotationsUint64(ctx, s.Annotations, annotations.DirectFileMappingInMB, wopts.DirectFileMappingInMB)
+		wopts.LowMMIOGapInMB = parseAnnotationsUint64(ctx, s.Annotations, annotations.MemoryLowMMIOGapInMB, wopts.LowMMIOGapInMB)
+		wopts.HighMMIOBaseInMB = parseAnnotationsUint64(ctx, s.Annotations, annotations.MemoryHighMMIOBaseInMB, wopts.HighMMIOBaseInMB)
+		wopts.HighMMIOGapInMB = parseAnnotationsUint64(ctx, s.Annotations, annotations.MemoryHighMMIOGapInMB, wopts.HighMMIOGapInMB)
+		wopts.AllowOvercommit = ParseAnnotationsBool(ctx, s.Annotations, annotations.AllowOvercommit, wopts.AllowOvercommit)
+		wopts.EnableDeferredCommit = ParseAnnotationsBool(ctx, s.Annotations, annotations.EnableDeferredCommit, wopts.EnableDeferredCommit)
+		wopts.ProcessorCount = ParseAnnotationsCPUCount(ctx, s, annotations.ProcessorCount, wopts.ProcessorCount)
+		//wopts.ProcessorLimit = ParseAnnotationsCPULimit(ctx, s, annotationProcessorLimit, wopts.ProcessorLimit)
+		wopts.ProcessorWeight = ParseAnnotationsCPUWeight(ctx, s, annotations.ProcessorWeight, wopts.ProcessorWeight)
+		wopts.StorageQoSBandwidthMaximum = ParseAnnotationsStorageBps(ctx, s, annotations.StorageQoSBandwidthMaximum, wopts.StorageQoSBandwidthMaximum)
+		wopts.StorageQoSIopsMaximum = ParseAnnotationsStorageIops(ctx, s, annotations.StorageQoSIopsMaximum, wopts.StorageQoSIopsMaximum)
+		wopts.DisableCompartmentNamespace = ParseAnnotationsBool(ctx, s.Annotations, annotations.DisableCompartmentNamespace, wopts.DisableCompartmentNamespace)
+		wopts.CPUGroupID = parseAnnotationsString(s.Annotations, annotations.CPUGroupID, wopts.CPUGroupID)
+		handleAnnotationFullyPhysicallyBacked(ctx, s.Annotations, wopts)
+		if err := handleCloneAnnotations(ctx, s.Annotations, wopts); err != nil {
+			return nil, err
+		}
+		wopts.IsKrypton = true
+		return wopts, nil
+	}
+	return nil, errors.New("cannot create UVM opts spec is not LCOW or WCOW")
+}
+
 // SpecToUVMCreateOpts parses `s` and returns either `*uvm.OptionsLCOW` or
 // `*uvm.OptionsWCOW`.
 func SpecToUVMCreateOpts(ctx context.Context, s *specs.Spec, id, owner string) (interface{}, error) {
