@@ -169,15 +169,34 @@ func (s *service) createInternal(ctx context.Context, req *task.CreateTaskReques
 			resp.Pid = uint32(e.Pid())
 			return resp, nil
 		}
-		pod, err = createPod(ctx, s.events, req, &spec)
+
+		// Determine what type of pod should be created.
+		isKryptonPod, err := oci.IsKryptonSandboxMode(spec.Annotations)
 		if err != nil {
 			s.cl.Unlock()
 			return nil, err
 		}
-		t, _ := pod.GetTask(req.ID)
-		e, _ := t.GetExec("")
-		resp.Pid = uint32(e.Pid())
-		s.taskOrPod.Store(pod)
+		if isKryptonPod {
+			pod, err := createKryptonPod(ctx, s.events, req, &spec)
+			if err != nil {
+				s.cl.Unlock()
+				return nil, err
+			}
+			t, _ := pod.GetTask(req.ID)
+			e, _ := t.GetExec("")
+			resp.Pid = uint32(e.Pid())
+			s.taskOrPod.Store(pod)
+		} else {
+			pod, err = createPod(ctx, s.events, req, &spec)
+			if err != nil {
+				s.cl.Unlock()
+				return nil, err
+			}
+			t, _ := pod.GetTask(req.ID)
+			e, _ := t.GetExec("")
+			resp.Pid = uint32(e.Pid())
+			s.taskOrPod.Store(pod)
+		}
 	} else {
 		t, err := newHcsStandaloneTask(ctx, s.events, req, &spec)
 		if err != nil {
