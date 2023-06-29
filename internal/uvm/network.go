@@ -55,49 +55,23 @@ func (uvm *UtilityVM) SetupNetworkNamespace(ctx context.Context, nsid string) er
 // and then hot add those endpoints.
 func (uvm *UtilityVM) SetupNetworkNamespaceWithEndpoints(ctx context.Context, nsid string, endpoints []*hns.HNSEndpoint) error {
 	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - Start : %s %v", nsid, endpoints)
-
 	nsidInsideUVM := nsid
-	if uvm.IsTemplate || uvm.IsClone {
-		nsidInsideUVM = DefaultCloneNetworkNamespaceID
-	}
+
 	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - 1")
+	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - Not clone")
 
-	// Add the network namespace inside the UVM if it is not a clone. (Clones will
-	// inherit the namespace from template)
-	if !uvm.IsClone {
-		log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - Not clone")
-
-		// Get the namespace struct from the actual nsid.
-		hcnNamespace, err := hcn.GetNamespaceByID(nsid)
-		if err != nil {
-			return err
-		}
-
-		// All templates should have a special NSID so that it
-		// will be easier to debug. Override it here.
-		if uvm.IsTemplate {
-			hcnNamespace.Id = nsidInsideUVM
-		}
-
-		if err = uvm.AddNetNS(ctx, hcnNamespace); err != nil {
-			return err
-		}
+	// Add the network namespace inside the UVM.
+	// Get the namespace struct from the actual nsid.
+	hcnNamespace, err := hcn.GetNamespaceByID(nsid)
+	if err != nil {
+		return err
 	}
+
+	if err = uvm.AddNetNS(ctx, hcnNamespace); err != nil {
+		return err
+	}
+
 	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - 2")
-
-	// If adding a network endpoint to clones or a template override nsid associated
-	// with it.
-	if uvm.IsClone || uvm.IsTemplate {
-		log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - clone or template")
-
-		// replace nsid for each endpoint
-		for _, ep := range endpoints {
-			ep.Namespace = &hns.Namespace{
-				ID: nsidInsideUVM,
-			}
-		}
-	}
-	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - 3")
 
 	if err := uvm.AddEndpointsToNS(ctx, nsidInsideUVM, endpoints); err != nil {
 		// Best effort clean up the NS
@@ -108,7 +82,7 @@ func (uvm *UtilityVM) SetupNetworkNamespaceWithEndpoints(ctx context.Context, ns
 		}
 		return err
 	}
-
+	
 	log.G(ctx).Debugf("SetupNetworkNamespaceWithEndpoints - Done")
 	return nil
 }
@@ -571,7 +545,7 @@ func getNetworkModifyRequest(adapterID string, requestType guestrequest.RequestT
 // addNIC adds a nic to the Utility VM.
 func (uvm *UtilityVM) addNIC(ctx context.Context, id string, endpoint *hns.HNSEndpoint) error {
 	// First a pre-add. This is a guest-only request and is only done on Windows.
-	
+
 	endpoint.Namespace.ID = "00000000-0000-0000-0000-000000000000"
 
 	if uvm.operatingSystem == "windows" {
